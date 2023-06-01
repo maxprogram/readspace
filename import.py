@@ -83,11 +83,11 @@ def build_db():
 
 	docs = []
 	for book in documents:
-		author = str(book['author'] or 'Random')
-		title = str(book['title'] or '')
+		author = str(book['author'] or 'Unknown')
+		title = book['title']
 		byline = ''
-		if author != 'Random':
-			byline = ' — ' + author + ' (' + title + ')'
+		if author != 'Unknown' and author != 'Random':
+			byline = ' — ' + author + (' (' + title + ')') if title else ''
 
 		for highlight in book['highlights']:
 			if highlight.get('is_discard'):
@@ -96,11 +96,15 @@ def build_db():
 				page_content=highlight['text'] + byline,
 				metadata={
 					'id': highlight['id'],
+					'text': highlight['text'],
 					'book': title,
 					'author': author,
 					'book_id': book['user_book_id'],
 					'favorite': highlight['is_favorite'],
 					'highlighted_at': highlight['highlighted_at'],
+					'tags': highlight['tags'],
+					'readwise_url': highlight['readwise_url'],
+					'note': highlight['note'],
 				}
 			))
 
