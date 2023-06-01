@@ -9,8 +9,11 @@ from langchain.schema import Document
 import tiktoken
 enc = tiktoken.encoding_for_model('gpt-4')
 
-os.environ.get('OPENAI_API_KEY')
-readwise_token = os.environ.get('READWISE_TOKEN')
+from dotenv import load_dotenv
+load_dotenv()
+
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+READWISE_TOKEN = os.getenv('READWISE_TOKEN')
 
 
 g_db = None
@@ -57,7 +60,7 @@ def get_highlights():
 			response = requests.get(
 				url="https://readwise.io/api/v2/export/",
 				params=params,
-				headers={"Authorization": f"Token {readwise_token}"},
+				headers={"Authorization": f"Token {READWISE_TOKEN}"},
 				verify=False
 			)
 			full_data.extend(response.json()['results'])
@@ -110,11 +113,14 @@ def build_db():
 
 	print('Adding ' + str(len(docs)) + ' documents to index...')
 
+	if len(docs) == 0:
+		print('No new documents to add!')
+		return {"documents_added": 0}
+
 	embeddings = OpenAIEmbeddings()
 
 	# If database already exists, add to it
-	last_fetch = _get_last_fetch()
-	if last_fetch is not None and os.path.exists(g_index):
+	if os.path.exists(g_index):
 		g_db = FAISS.load_local(g_index, embeddings)
 		g_db.add_documents(docs)
 	else:
@@ -123,7 +129,7 @@ def build_db():
 	g_db.save_local(g_index)
 	_save_last_fetch()
 
-	return g_db
+	return {"documents_added": len(docs)}
 
 
 def load_db():
@@ -175,10 +181,13 @@ def get_context(query, max_tokens=1024):
 
 
 if __name__ == '__main__':
-	load_db()
-	while True:
-		query = input('\nQuery: ')
-		context, matches = get_context(query)
-		print('')
-		print(context)
+	build_db()
+
+	
+	# load_db()
+	# while True:
+	# 	query = input('\nQuery: ')
+	# 	context, matches = get_context(query)
+	# 	print('')
+	# 	print(context)
 
