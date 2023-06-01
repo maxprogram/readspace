@@ -6,9 +6,6 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.schema import Document
 
-import tiktoken
-enc = tiktoken.encoding_for_model('gpt-4')
-
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -84,6 +81,7 @@ def build_db():
 
 	documents = get_highlights()
 
+	# Create index documents
 	docs = []
 	for book in documents:
 		author = str(book['author'] or 'Unknown')
@@ -111,11 +109,11 @@ def build_db():
 				}
 			))
 
-	print('Adding ' + str(len(docs)) + ' documents to index...')
-
 	if len(docs) == 0:
 		print('No new documents to add!')
 		return {"documents_added": 0}
+
+	print('Adding ' + str(len(docs)) + ' documents to index...')
 
 	embeddings = OpenAIEmbeddings()
 
@@ -150,44 +148,33 @@ def load_db():
 	return g_db
 
 
-def get_context(query, max_tokens=1024):
+def search_similar(query):
 	"""
-		Gets context for a given query
+		Search for similar documents to a query
 	"""
 	db = load_db()
 
-	matches = db.similarity_search_with_score(query, k=10)
+	matches = db.similarity_search_with_score(query, k=30)
 
-	context = ''
-	context_tokens = 0
+	results = []
 	for match in matches:
-		doc, score = match
-		content = doc.page_content
+		results.append({
+			**match[0].metadata,
+			"score": match[1],
+		})
 
-		if context_tokens > max_tokens:
-			break
-		
-		tokens = len(enc.encode(content))
-		context_tokens += tokens
-
-		data = doc.metadata
-		author = data['author']
-		title = data['book']
-
-		highlight = f'{content}\n\n'
-		context += highlight
-
-	return (context, matches)
+	return results
 
 
 if __name__ == '__main__':
-	build_db()
-
-	
-	# load_db()
-	# while True:
-	# 	query = input('\nQuery: ')
-	# 	context, matches = get_context(query)
-	# 	print('')
-	# 	print(context)
+	while True:
+		query = input('\nQuery: ')
+		matches = search_similar(query)
+		print('')
+		for match in matches[:5]:
+			print(match['text'])
+			print('Score: ' + str(match['score']))
+			print('Book: ' + match['book'])
+			print('Author: ' + match['author'])
+			print('')
 
