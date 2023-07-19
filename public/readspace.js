@@ -1,6 +1,8 @@
 
 const { createApp } = Vue;
 
+const BASE_URL = 'http://localhost:3080';
+
 const app = createApp({
 
   data() {
@@ -8,39 +10,43 @@ const app = createApp({
       searchQuery: '',
       highlights: [],
       showSettings: false,
+      defaultSettings: [
+        { name: 'OpenAI API Key', key: 'OPENAI_API_KEY', value: '' },
+        { name: 'Readwise API Key', key: 'READWISE_TOKEN', value: '' },
+      ],
       settings: {}
     }
   },
 
   methods: {
-    loadHighlights() {
-      fetch('/api/load_highlights')
+
+    async loadHighlights() {
+      fetch(`${BASE_URL}/api/load_highlights`)
         .then(response => response.json())
         .then(data => this.highlights = data);
     },
-    searchHighlights() {
+
+    async searchHighlights() {
       fetch(`/api/search?q=${this.searchQuery}`)
         .then(response => response.json())
         .then(data => this.highlights = data);
     },
-    clearHighlights() {
-      fetch('/api/clear_highlights')
-        .then(() => this.highlights = []);
-    },
-    openSettings() {
-      fetch('/api/settings')
-        .then(response => response.json())
-        .then(data => this.settings = data);
+
+    async openSettings() {
+      let response = await fetch(`${BASE_URL}/api/settings`)
+      this.settings = response.json();
       this.showSettings = true;
     },
-    saveSettings() {
-      fetch('/api/settings', {
+
+    async saveSettings() {
+      await fetch(`${BASE_URL}/api/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(this.settings)
-      })
-        .then(() => this.showSettings = false);
+      });
+      this.showSettings = false;
     }
+
   }
   
 });

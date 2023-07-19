@@ -1,4 +1,0 @@
-tiktoken
-langchain
-sanic
-python-dotenv

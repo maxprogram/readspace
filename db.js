@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs-extra');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const https = require('https');
@@ -22,7 +22,8 @@ const g_last_fetch = 'data/last_fetch.txt';
  */
 const save_last_fetch = async () => {
     const time = new Date().toISOString();
-    fs.writeFileSync(g_last_fetch, time);
+    await fs.ensureFile(g_last_fetch);
+    await fs.writeFile(g_last_fetch, time);
 };
 
 
@@ -32,7 +33,7 @@ const save_last_fetch = async () => {
  */
 const get_last_fetch = async () => {
     if (!fs.existsSync(g_last_fetch)) return null;
-    const time = fs.readFileSync(g_last_fetch, 'utf8');
+    const time = await fs.readFile(g_last_fetch, 'utf8');
     return time;
 };
 
@@ -120,6 +121,7 @@ const build_db = async () => {
     }
 
     // Save database
+    await fs.ensureDir(g_index);
     await g_db.save(g_index);
     await save_last_fetch();
 
