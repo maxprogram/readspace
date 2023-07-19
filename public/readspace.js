@@ -18,6 +18,14 @@ const app = createApp({
     }
   },
 
+  mounted() {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    this.searchQuery = params.get('q') || '';
+    if (this.searchQuery) {
+      this.searchHighlights();
+    }
+  },
+
   methods: {
 
     async loadHighlights() {
@@ -31,6 +39,10 @@ const app = createApp({
         ...h,
         author: h.author.replace(/\./g, ' . '),
       }));
+
+      window.location.hash = `q=${encodeURIComponent(this.searchQuery)}`;
+      this.adjustHeight();
+      window.scrollTo(0, 0);
     },
 
     async openSettings() {
@@ -46,7 +58,21 @@ const app = createApp({
         body: JSON.stringify(this.settings)
       });
       this.showSettings = false;
-    }
+    },
+
+    searchSimilar: function(text) {
+      this.searchQuery = text;
+      this.searchHighlights();
+    },
+
+    adjustHeight(event) {
+      const $el = event ? event.target : document.getElementById('searchQuery');
+      const $spacer = document.getElementById('spacer');
+
+      $el.style.height = 'auto';
+      $el.style.height = $el.scrollHeight + 'px';
+      $spacer.style.height = $el.scrollHeight - 50 + 'px';
+    },
 
   }
   
