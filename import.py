@@ -1,6 +1,7 @@
 import os
 import requests
 import datetime
+import json
 
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
@@ -15,7 +16,7 @@ READWISE_TOKEN = os.getenv('READWISE_TOKEN')
 
 g_db = None
 g_index = 'data/readwise_faiss_index'
-g_last_fetch = 'data/last_fetch.json'
+g_last_fetch = 'data/last_fetch.txt'
 
 
 def _save_last_fetch():
@@ -104,7 +105,6 @@ def build_db():
 					'favorite': highlight['is_favorite'],
 					'highlighted_at': highlight['highlighted_at'],
 					'tags': highlight['tags'],
-					'readwise_url': highlight['readwise_url'],
 					'note': highlight['note'],
 				}
 			))
@@ -148,19 +148,19 @@ def load_db():
 	return g_db
 
 
-def search_similar(query):
+def search_similar(query, k=30):
 	"""
 		Search for similar documents to a query
 	"""
 	db = load_db()
 
-	matches = db.similarity_search_with_score(query, k=30)
+	matches = db.similarity_search_with_score(query, k=k)
 
 	results = []
 	for match in matches:
 		results.append({
 			**match[0].metadata,
-			"score": match[1],
+			"score": float(match[1]),
 		})
 
 	return results
@@ -177,4 +177,6 @@ if __name__ == '__main__':
 			print('Book: ' + match['book'])
 			print('Author: ' + match['author'])
 			print('')
+		
+		print(json.dumps(matches[:5], indent=2))
 

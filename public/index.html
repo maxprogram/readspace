@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Readspace</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+    }
+  </style>
+  <style>
+    .font-serif {
+      font-family: 'Adobe Caslon Pro', ui-serif, 'Times New Roman', serif !important;
+    }
+  </style>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="flex justify-center mt-8">
+
+      <!-- Navigation Panel -->
+      <div class="w-[260px] flex h-full flex-none flex-col p-2 fixed top-0 left-0">
+        <div class="flex-grow overflow-auto space-y-2">
+          <button 
+            @click="loadHighlights"
+            class="flex w-full cursor-pointer select-none items-center rounded-md gap-3 py-3 px-3 
+              text-[14px] leading-3 text-neutral-600
+              bg-neutral-100 hover:bg-gray-200 transition-colors duration-200"
+          >
+            Load New Highlights
+          </button>
+          <button 
+            @click="clearHighlights"
+            class="flex w-full cursor-pointer select-none items-center rounded-md gap-3 py-3 px-3 
+              text-[14px] leading-3 text-neutral-600
+              bg-neutral-100 hover:bg-gray-200 transition-colors duration-200"
+          >
+            Clear Highlights
+          </button>
+        </div>
+        <div class="flex flex-col items-center">
+          <button 
+            @click="openSettings"
+            class="flex w-full cursor-pointer select-none items-center rounded-md gap-3 py-3 px-3 
+              text-[14px] leading-3 text-neutral-600
+              bg-neutral-100 hover:bg-gray-200 transition-colors duration-200"
+          >
+            <div>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-settings"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"></path><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path></svg>
+            </div>
+            <span>Settings</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Box -->
+      <div class="w-1/2 fixed top-0 border-transparent bg-gradient-to-b from-white via-white to-transparent pt-6 dark:border-white/20 dark:via-[#343541] dark:from-[#343541] md:pt-2">
+        <div class="stretch mx-2 mt-4 flex flex-row gap-3 last:mb-2 md:mx-4 md:last:mb-6 lg:mx-auto lg:max-w-3xl">
+          <div class="relative flex w-full flex-grow flex-col rounded-md border border-black/10 bg-white shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50 dark:bg-[#40414F] dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]">
+            <!-- <button class="absolute left-2 top-2 rounded-sm p-1 text-neutral-800 opacity-60 hover:bg-neutral-200 hover:text-neutral-900 dark:bg-opacity-50 dark:text-neutral-100 dark:hover:text-neutral-200">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-bolt"><path d="M13 3l0 7l6 0l-8 11l0 -7l-6 0l8 -11"></path></svg>
+            </button> -->
+            <textarea 
+              class="m-0 w-full resize-none border-0 bg-transparent p-0 py-2 pr-[65px] pl-3 
+                text-black dark:bg-transparent dark:text-white md:py-3 md:pl-3 focus:shadow-transparent focus:ring-0" 
+              placeholder="Enter a quote or passage..." 
+              rows="1" 
+              style="resize: none; max-height: 400px; overflow: hidden; height: 44px; bottom: 44px;"
+              v-model="searchQuery"
+              ></textarea>
+            <button 
+              @click="searchHighlights"
+              class="absolute right-2 top-2 rounded-sm p-1 px-2 
+                text-sm text-neutral-800 opacity-60 bg-neutral-200
+                hover:bg-neutral-300 hover:text-neutral-900 
+                dark:bg-opacity-50 dark:text-neutral-100 dark:hover:text-neutral-200"
+            >
+              Find Similar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Column -->
+      <div class="w-1/2 pb-10">
+
+        <!-- Highlights List -->
+        <div v-for="highlight in highlights" class="flex flex-row mt-[100px]">
+          <div class="basis-3/4">
+            <div class="text-lg prose prose-base font-serif">
+              {{ highlight.text }}
+            </div>
+            <div class="text-gray-400 mt-4" v-if="highlight.note">
+              <span class="text-sm border-b border-gray-300">Note:</span>
+              <div class="font-serif">
+                {{ highlight.note }}
+              </div>
+            </div>
+          </div>
+          <div class="basis-1/4 ml-5 space-y-2">
+            <div class="text-sm text-gray-500 font-medium">{{ highlight.author }}</div>
+            <div class="text-sm text-gray-400">{{ highlight.book }}</div>
+            <div class="text-sm text-gray-300">{{ highlight.tags.join(', ') }}</div>
+            <div class="text-sm text-gray-400">
+              <a :href="'https://readwise.io/open/' + highlight.id" target="_blank" class="underline">
+                View on Readwise
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Settings Modal -->
+    <div v-if="showSettings" class="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50">
+      <div class="bg-white p-4 rounded">
+        <h2 class="text-lg font-bold mb-2">Settings</h2>
+        <div v-for="(value, key) in settings" class="mb-2">
+          <label :for="key" class="font-bold">{{ key }}</label>
+          <input :id="key" v-model="settings[key]" type="text" class="form-input">
+        </div>
+        <div class="flex justify-end mt-4">
+          <button @click="saveSettings" class="btn-primary">Save</button>
+          <button @click="showSettings = false" class="btn-secondary ml-2">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="readspace.js"></script>
+</body>
+</html>
