@@ -21,20 +21,21 @@ const app = createApp({
   methods: {
 
     async loadHighlights() {
-      fetch(`${BASE_URL}/api/load_highlights`)
-        .then(response => response.json())
-        .then(data => this.highlights = data);
+      let response = await fetch(`${BASE_URL}/api/load_highlights`);
+      let results = await response.json();
     },
 
     async searchHighlights() {
-      fetch(`/api/search?q=${this.searchQuery}`)
-        .then(response => response.json())
-        .then(data => this.highlights = data);
+      let response = await fetch(`${BASE_URL}/api/search?q=${this.searchQuery}`);
+      this.highlights = (await response.json()).map(h => ({
+        ...h,
+        author: h.author.replace(/\./g, ' . '),
+      }));
     },
 
     async openSettings() {
       let response = await fetch(`${BASE_URL}/api/settings`)
-      this.settings = response.json();
+      this.settings = await response.json();
       this.showSettings = true;
     },
 

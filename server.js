@@ -17,19 +17,24 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.get('/api/load_highlights', async (req, res) => {
     try {
         const result = await build_db();
-        res.send(result);
+        res.json(result);
     } catch (err) {
-        res.status(500).send({ error: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
 
 app.get('/api/search', async (req, res) => {
     try {
         const query = req.query.q;
+
+        console.log(`\n* Searching for "${query.substring(0, 50)}..."`);
         const results = await search_similar(query);
-        res.send(results);
+        console.log(`> First result: "${results[0].text.substring(0, 50)}..."`);
+
+        res.json(results);
     } catch (err) {
-        res.status(500).send({ error: err.message });
+        console.error(err);
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -40,7 +45,7 @@ app.get('/api/settings', async (req, res) => {
 
     const data = await fs.readFile('data/settings.json');
     const settings = JSON.parse(data);
-    res.send(settings);
+    res.json(settings);
     
 });
 
@@ -48,12 +53,12 @@ app.post('/api/settings', async (req, res) => {
     try {
         const settings = JSON.stringify(req.body);
         await fs.writeFile('data/settings.json', settings);
-        res.send({
+        res.json({
             status: 'sucess',
             settings
         });
     } catch (err) {
-        res.status(500).send({ error: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
 
