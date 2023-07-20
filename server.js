@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs-extra');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const path = require('path');
 
 const { build_db, search_similar } = require('./db.js');
 
@@ -13,6 +14,13 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.get('/api/load_highlights', async (req, res) => {
     try {

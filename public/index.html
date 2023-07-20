@@ -82,21 +82,21 @@
 
       <!-- Search Box -->
       <div class="w-3/4 md:w-1/2 fixed top-0 z-10 border-transparent bg-gradient-to-b from-white via-white to-transparent pt-6 md:pt-2">
-        <div class="stretch mx-2 mt-4 flex flex-row gap-3 last:mb-2 md:mx-4 md:last:mb-6 lg:mx-auto lg:max-w-3xl">
+        <div class="stretch mx-1 mt-4 flex flex-row gap-3 last:mb-2 md:mx-0 md:last:mb-6 lg:mx-auto lg:max-w-3xl">
           <div class="relative flex w-full flex-grow flex-col rounded-md border border-black/10 bg-white shadow-[0_0_10px_rgba(0,0,0,0.10)]">
             <!-- <button class="absolute left-2 top-2 rounded-sm p-1 text-neutral-800 opacity-60 hover:bg-neutral-200 hover:text-neutral-900 dark:bg-opacity-50 dark:text-neutral-100 dark:hover:text-neutral-200">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-bolt"><path d="M13 3l0 7l6 0l-8 11l0 -7l-6 0l8 -11"></path></svg>
             </button> -->
             <textarea 
               class="m-0 w-full resize-none border-0 bg-transparent p-0 py-2 pr-[110px] pl-3 
-                text-black md:py-3 md:pl-3 focus:shadow-transparent focus:ring-0" 
+                text-black md:py-3 focus:shadow-transparent focus:ring-0" 
               placeholder="Enter a quote or passage..." 
-              rows="1" 
+              rows="1"
               style="resize: none; max-height: 400px; overflow: hidden; height: 44px; bottom: 44px;"
               v-model="searchQuery"
               id="searchQuery"
               @input="adjustHeight"
-              @keydown.enter="searchHighlights"
+              @keydown.enter.prevent="searchHighlights"
             ></textarea>
             <button 
               @click="searchHighlights"
@@ -111,7 +111,7 @@
       </div>
 
       <!-- Main Column -->
-      <div class="w-3/4 md:w-1/2 pb-10">
+      <div class="w-full sm:w-3/4 md:w-1/2 pb-10 px-2 sm:px-0">
 
         <div id="spacer" style="display: block; height: 50px;"></div>
 
