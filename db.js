@@ -39,6 +39,19 @@ const get_last_fetch = async () => {
 
 
 /**
+ * Loads in settings.json with customized api keys
+ */
+const load_settings = async () => {
+    if (fs.existsSync('data/settings.json')) {
+        const data = await fs.readFile('data/settings.json');
+        const settings = JSON.parse(data);
+        if (settings.openai_api_key) OPENAI_API_KEY = settings.openai_api_key;
+        if (settings.readwise_token) READWISE_TOKEN = settings.readwise_token;
+    }
+};
+
+
+/**
  * Fetches all highlights from the Readwise export API
  * @returns {Array} An array of highlights
  */
@@ -77,6 +90,7 @@ const get_highlights = async () => {
  * @returns {Object} An object with the number of documents added
  */
 const build_db = async () => {
+    await load_settings();
     const documents = await get_highlights();
 
     // Create index documents
@@ -142,6 +156,7 @@ const load_db = async () => {
         throw new Error('Readwise highlights must be loaded first!');
     }
 
+    await load_settings();
     const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY });
     g_db = await FaissStore.load(g_index, embeddings);
 
