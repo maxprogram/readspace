@@ -1,7 +1,7 @@
-
 const { createApp } = Vue;
 
-const BASE_URL = 'http://localhost:3080';
+// const BASE_URL = 'http://localhost:3080';
+const BASE_URL = '';
 
 const app = createApp({
 
@@ -9,6 +9,10 @@ const app = createApp({
     return {
       searchQuery: '',
       highlights: [],
+      showNav: false,
+      isLoading: false,
+      isLoadingHighlights: false,
+      newHighlightsCount: null,
       showSettings: false,
       defaultSettings: [
         { name: 'OpenAI API Key', key: 'OPENAI_API_KEY', value: '' },
@@ -22,6 +26,7 @@ const app = createApp({
     const params = new URLSearchParams(window.location.hash.slice(1));
     this.searchQuery = params.get('q') || '';
     if (this.searchQuery) {
+      this.adjustHeight();
       this.searchHighlights();
     }
   },
@@ -29,11 +34,19 @@ const app = createApp({
   methods: {
 
     async loadHighlights() {
+      this.isLoadingHighlights = true;
       let response = await fetch(`${BASE_URL}/api/load_highlights`);
-      let results = await response.json();
+      let data = await response.json();
+      this.newHighlightsCount = data.documents_added;
+      this.isLoadingHighlights = false;
     },
 
     async searchHighlights() {
+      if (!this.searchQuery || this.searchQuery.trim() == '') return;
+
+      this.isLoading = true;
+      window.scrollTo(0, 0);
+
       let response = await fetch(`${BASE_URL}/api/search?q=${this.searchQuery}`);
       this.highlights = (await response.json()).map(h => ({
         ...h,
@@ -42,12 +55,18 @@ const app = createApp({
 
       window.location.hash = `q=${encodeURIComponent(this.searchQuery)}`;
       this.adjustHeight();
-      window.scrollTo(0, 0);
+      this.isLoading = false;
     },
 
     async openSettings() {
       let response = await fetch(`${BASE_URL}/api/settings`)
       this.settings = await response.json();
+      // If settings are empty, set defaults
+      if (Object.keys(this.settings).length === 0) {
+        for (let setting of this.defaultSettings) {
+          this.settings[setting.key] = setting.value;
+        }
+      }
       this.showSettings = true;
     },
 
