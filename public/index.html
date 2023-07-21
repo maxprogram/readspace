@@ -163,11 +163,10 @@
           <div class="basis-1/4 ml-5 space-y-2">
             <div class="text-sm text-gray-500 font-medium">{{ highlight.author }}</div>
             <div class="text-sm text-gray-400">{{ highlight.book }}</div>
-            <div class="text-sm text-gray-300">{{ highlight.tags.join(', ') }}</div>
-            <div class="text-sm text-gray-400">
-              <a :href="'https://readwise.io/open/' + highlight.id" target="_blank" class="flex underline align-middle">
-                View on Readwise <svg class="stroke-2 h-4 w-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><g fill="none" fill-rule="evenodd"><path d="M18 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8c0-1.1.9-2 2-2h5M15 3h6v6M10 14L20.2 3.8"/></g></svg>
-              </a>
+            <div class="text-sm text-gray-300">
+              <span v-for="tag in highlight.tags" class="bg-gray-100 rounded-lg px-2 py-1 mr-1 text-gray-400">
+                {{ tag.name }}
+              </span>
             </div>
             <button 
               @click="searchSimilar(highlight.text)"
@@ -177,6 +176,11 @@
             >
               Find Similar
             </button>
+            <div class="text-sm text-gray-400">
+              <a :href="'https://readwise.io/open/' + highlight.id" target="_blank" class="flex underline align-middle">
+                View on Readwise <svg class="stroke-2 h-4 w-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><g fill="none" fill-rule="evenodd"><path d="M18 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8c0-1.1.9-2 2-2h5M15 3h6v6M10 14L20.2 3.8"/></g></svg>
+              </a>
+            </div>
           </div>
         </div>
 
