@@ -4,7 +4,12 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
 
-const { build_db, search_similar } = require('./db.js');
+const { build_db, search_similar } = require('./functions.js');
+
+
+const DATA_PATH = path.join(process.env.HOME, 'Documents/Readspace');
+const SETTINGS_PATH = path.join(DATA_PATH, 'settings.json');
+
 
 const app = express();
 const port = process.env.PORT || 3080;
@@ -37,7 +42,7 @@ app.get('/api/search', async (req, res) => {
 
         console.log(`\n* Searching for "${query.substring(0, 50)}..."`);
         const results = await search_similar(query);
-        console.log(`> First result: "${results[0].text.substring(0, 50)}..."`);
+        console.log(`> First result: "${results[0].page_content.substring(0, 50)}..."`);
 
         res.json(results);
     } catch (err) {
@@ -47,11 +52,12 @@ app.get('/api/search', async (req, res) => {
 });
 
 app.get('/api/settings', async (req, res) => {
-    if (!fs.existsSync('data/settings.json')) {
-        await fs.writeFile('data/settings.json', '{}');
+    if (!fs.existsSync(SETTINGS_PATH)) {
+        await fs.ensureFile(SETTINGS_PATH);
+        await fs.writeFile(SETTINGS_PATH, '{}');
     }
 
-    const data = await fs.readFile('data/settings.json');
+    const data = await fs.readFile(SETTINGS_PATH);
     const settings = JSON.parse(data);
     res.json(settings);
     
@@ -60,7 +66,7 @@ app.get('/api/settings', async (req, res) => {
 app.post('/api/settings', async (req, res) => {
     try {
         const settings = JSON.stringify(req.body);
-        await fs.writeFile('data/settings.json', settings);
+        await fs.writeFile(SETTINGS_PATH, settings);
         res.json({
             status: 'sucess',
             settings
@@ -73,3 +79,5 @@ app.post('/api/settings', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
+
+module.exports = app;

@@ -1,192 +1,139 @@
+const { Configuration, OpenAIApi } = require('openai');
+const { IndexFlatL2 } = require('faiss-node');
 const fs = require('fs-extra');
-const axios = require('axios');
-const dotenv = require('dotenv');
-const https = require('https');
+const uuid = require('uuid');
+const path = require('path');
 
-const { OpenAIEmbeddings } = require('langchain/embeddings/openai');
-const { FaissStore } = require('langchain/vectorstores/faiss');
-const { Document } = require('langchain/document');
-
-dotenv.config();
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const READWISE_TOKEN = process.env.READWISE_TOKEN;
-
-
-let g_db = null;
-const g_index = 'data/readwise_faiss_index';
-const g_last_fetch = 'data/last_fetch.txt';
-
-
-/**
- * Saves the last time the database was updated to local file.
- */
-const save_last_fetch = async () => {
-    const time = new Date().toISOString();
-    await fs.ensureFile(g_last_fetch);
-    await fs.writeFile(g_last_fetch, time);
-};
-
-
-/**
- * Gets the last time the database was updated
- * @returns {string} The last time the database was updated
- */
-const get_last_fetch = async () => {
-    if (!fs.existsSync(g_last_fetch)) return null;
-    const time = await fs.readFile(g_last_fetch, 'utf8');
-    return time;
-};
-
-
-/**
- * Loads in settings.json with customized api keys
- */
-const load_settings = async () => {
-    if (fs.existsSync('data/settings.json')) {
-        const data = await fs.readFile('data/settings.json');
-        const settings = JSON.parse(data);
-        if (settings.openai_api_key) OPENAI_API_KEY = settings.openai_api_key;
-        if (settings.readwise_token) READWISE_TOKEN = settings.readwise_token;
+class VectorStore {
+    /**
+     * Constructor for the VectorStore class
+     * Initializes OpenAI API and prepares properties for the index and mapping
+     */
+    constructor() {
+        this.configuration = new Configuration({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
+        this.openai = new OpenAIApi(this.configuration);
+        this.index = null;
+        this.document_mapping = {};
+        this.index_mapping = {};
     }
-};
 
 
-/**
- * Fetches all highlights from the Readwise export API
- * @returns {Array} An array of highlights
- */
-const get_highlights = async () => {
-    const fetchFromExportApi = async (updatedAfter = null) => {
-        let fullData = [];
-        let nextPageCursor = null;
-        while (true) {
-            const params = {};
-            if (nextPageCursor) {
-                params.pageCursor = nextPageCursor;
-            }
-            if (updatedAfter) {
-                params.updatedAfter = updatedAfter;
-            }
-            const response = await axios.get("https://readwise.io/api/v2/export/", {
-                params: params,
-                headers: { "Authorization": `Token ${READWISE_TOKEN}` },
-                httpsAgent: new https.Agent({ rejectUnauthorized: false })
+    /**
+   * Handles OpenAI API calls with exponential backoff on 503 and 429 errors
+   * @param {string[]} texts - Array of texts to be embedded
+   * @param {number} [retryCount=0] - Current count of retries
+   * @returns {Promise} Promise resolving to an array of embeddings
+   */
+    async _createEmbeddings(texts, retryCount = 0) {
+        const maxRetries = 5;
+        const delay = 5000;
+
+        try {
+            const result = await this.openai.createEmbedding({
+                model: 'text-embedding-ada-002',
+                input: texts,
             });
-            fullData = fullData.concat(response.data.results);
-            nextPageCursor = response.data.nextPageCursor;
-            if (!nextPageCursor) break;
-        }
-        return fullData;
-    };    
-
-    const lastFetch = await get_last_fetch();
-    const allData = await fetchFromExportApi(lastFetch);
-    return allData;
-};
-
-
-/**
- * Builds a database of Readwise highlights
- * @returns {Object} An object with the number of documents added
- */
-const build_db = async () => {
-    await load_settings();
-    const documents = await get_highlights();
-
-    // Create index documents
-    const docs = [];
-    for (let book of documents) {
-        const author = book.author || 'Unknown';
-        const title = book.title;
-
-        for (let highlight of book.highlights) {
-            if (highlight.is_discard) continue;
-            docs.push(new Document({
-                pageContent: `${highlight.text}`,
-                metadata: {
-                    id: highlight.id,
-                    text: highlight.text,
-                    book: title,
-                    author: author,
-                    book_id: book.user_book_id,
-                    favorite: highlight.is_favorite,
-                    highlighted_at: highlight.highlighted_at,
-                    tags: highlight.tags,
-                    note: highlight.note,
-                },
-            }));
+            return result.data.data;
+        } catch (error) {
+            if ((error.statusCode === 503 || error.statusCode === 429) && retryCount < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this._createEmbeddings(texts, retryCount + 1);
+            } else {
+                throw error;
+            }
         }
     }
 
-    if (docs.length === 0) {
-        console.log('No new documents to add!');
-        return { documents_added: 0 };
+    /**
+     * Creates embeddings for the provided documents and adds them to the index
+     * @param {Object[]} documents - Array of documents with `page_content` and `metadata`
+     */
+    async addDocuments(documents) {
+        const batchSize = 512;
+        const embeddings = [];
+
+        for (let i = 0; i < documents.length; i += batchSize) {
+            const batch = documents.slice(i, i + batchSize);
+            const texts = batch.map(doc => doc.page_content);
+            
+            const result = await this._createEmbeddings(texts);
+            
+            embeddings.push(...result.map(res => res.embedding));
+        }
+
+        const dimension = embeddings[0].length;
+        if (!this.index) {
+            this.index = new IndexFlatL2(dimension);
+        }
+
+        const indexSize = this.index.ntotal();
+        for (let i = 0; i < embeddings.length; i++) {
+            const documentId = uuid.v4();
+            // Add the embedding to the index
+            this.index.add(embeddings[i]);
+            // Add the document to the mapping
+            this.document_mapping[documentId] = documents[i];
+            // Add the document id to the index_mapping mapping
+            const index = indexSize + i;
+            this.index_mapping[index] = documentId;
+        }
+
+        return this;
     }
 
-    console.log(`Adding ${docs.length} documents to index...`);
+    /**
+     * Saves the index and the docstore to specified directory
+     * @param {string} directory - Path to the directory where index and docstore will be saved
+     */
+    async save(directory) {
+        const indexFilePath = path.join(directory, 'faiss.index');
+        const docstoreFilePath = path.join(directory, 'docstore.json');
 
-    // Add documents to database
-    const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY });
-    if (fs.existsSync(g_index)) {
-        g_db = await FaissStore.load(g_index, embeddings);
-        await g_db.addDocuments(docs);
-    } else {
-        g_db = await FaissStore.fromDocuments(docs, embeddings);
+        await fs.ensureDir(directory);
+        this.index.write(indexFilePath);
+
+        const docstore = [this.document_mapping, this.index_mapping];
+        await fs.writeFile(docstoreFilePath, JSON.stringify(docstore));
+
+        return this;
     }
 
-    // Save database
-    await fs.ensureDir(g_index);
-    await g_db.save(g_index);
-    await save_last_fetch();
+    /**
+     * Loads the index and the docstore from specified directory
+     * @param {string} directory - Path to the directory from where index and docstore will be loaded
+     */
+    async load(directory) {
+        const indexFilePath = path.join(directory, 'faiss.index');
+        const docstoreFilePath = path.join(directory, 'docstore.json');
 
-    return {
-        documents_added: docs.length
-    };
-};
+        this.index = IndexFlatL2.read(indexFilePath);
 
+        const docstore = await fs.readFile(docstoreFilePath);
+        [this.document_mapping, this.index_mapping] = JSON.parse(docstore);
 
-/**
- * Loads the database from disk
- * @returns {Object} The database
- */
-const load_db = async () => {
-    if (g_db !== null) return g_db;
-    
-    if (!fs.existsSync(g_index)) {
-        throw new Error('Readwise highlights must be loaded first!');
+        return this;
     }
 
-    await load_settings();
-    const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY });
-    g_db = await FaissStore.load(g_index, embeddings);
+    /**
+     * Searches the index for the provided query and returns the top k results
+     * @param {string} query - The query to search for in the index
+     * @param {number} [k=4] - The number of top entries to return
+     * @returns {Object[]} Array of document objects: { page_content, metadata, score }
+     */
+    async search(query, k = 4) {
+        const embeddingResponse = await this._createEmbeddings(query);
+        const embedding = embeddingResponse[0].embedding;
+        
+        const results = this.index.search(embedding, k);
 
-    return g_db;
-};
+        return results.labels.map((id, idx) => ({
+            ...this.document_mapping[this.index_mapping[id]],
+            id: this.index_mapping[id],
+            score: 1 - results.distances[idx],
+        }));
+    }
+}
 
-
-/**
- * Searches the database for similar documents
- * @param {string} query The query to search for
- * @param {number} [k] The number of results to return
- * @returns {Array} An array of results
- */
-const search_similar = async (query, k = 30) => {
-    const db = await load_db();
-
-    const matches = await db.similaritySearchWithScore(query, k);
-
-    const results = matches.map(match => ({
-        ...match[0].metadata,
-        score: match[1],
-    }));
-
-    return results;
-};
-
-
-module.exports = {
-    get_highlights,
-    build_db,
-    load_db,
-    search_similar,
-};
+module.exports = VectorStore;

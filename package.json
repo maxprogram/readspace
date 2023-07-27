@@ -1,9 +1,17 @@
 {
   "name": "readspace",
+  "description": "Explore your Readwise highlights by semantically searching them and finding similar highlights.",
   "version": "1.0.0",
-  "main": "index.js",
-  "author": "Max",
+  "main": "main.js",
+  "author": "Max Olson",
   "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "local": "node server.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
+  },
   "dependencies": {
     "axios": "^1.4.0",
     "body-parser": "^1.20.2",
@@ -12,7 +20,28 @@
     "express": "^4.18.2",
     "faiss-node": "^0.2.2",
     "fs-extra": "^11.1.1",
-    "langchain": "^0.0.112",
-    "pickleparser": "^0.1.0"
+    "openai": "^3.3.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "electron": "^25.3.1",
+    "electron-builder": "^24.4.0"
+  },
+  "build": {
+    "appId": "com.electron.readspace",
+    "productName": "Readspace",
+    "copyright": "Copyright (c) 2023 Max Olson",
+    "files": [
+      "main.js",
+      "server.js",
+      "db.js",
+      "functions.js",
+      "public/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.reference",
+      "icon": "public/images/icon.png",
+      "strictVerify": false
+    }
   }
 }

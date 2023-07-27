@@ -57,6 +57,7 @@
       font-family: 'EB Garamond', ui-serif, serif !important;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
 <body>
@@ -70,7 +71,7 @@
         :class="{'hidden': !showNav}"
       >
         <div class="flex-grow overflow-auto space-y-2">
-          <img src="/images/logo.png" alt="readspace" class="w-full mb-5">
+          <img src="images/logo.png" alt="readspace" class="w-full mb-5">
           <button 
             @click="loadHighlights"
             class="flex w-full cursor-pointer select-none items-center rounded-md gap-3 py-3 px-3 
@@ -148,11 +149,12 @@
         </div>
 
         <!-- Highlights List -->
-        <div v-for="highlight in highlights" class="flex flex-row mt-[100px]">
-          <div class="basis-3/4">
-            <div class="text-lg prose prose-base font-serif">
-              {{ highlight.text }}
-            </div>
+        <div v-for="highlight in highlights" class="flex flex-row mt-[100px] highlight">
+          <div class="basis-3/4" style="max-width: 75%;">
+            <div
+              class="w-full text-lg prose prose-base font-serif break-words"
+              v-html="highlight.html"
+            ></div>
             <div class="text-gray-400 mt-4" v-if="highlight.note">
               <span class="text-sm border-b border-gray-300">Note:</span>
               <div class="font-serif">
@@ -161,7 +163,9 @@
             </div>
           </div>
           <div class="basis-1/4 ml-5 space-y-2">
-            <div class="text-sm text-gray-500 font-medium">{{ highlight.author }}</div>
+            <div class="text-sm text-gray-500 font-medium" style="word-break: break-all;">
+              {{ highlight.author }}
+            </div>
             <div class="text-sm text-gray-400">{{ highlight.book }}</div>
             <div class="text-sm text-gray-300">
               <span v-for="tag in highlight.tags" class="bg-gray-100 rounded-lg px-2 py-1 mr-1 text-gray-400">
@@ -177,8 +181,9 @@
               Find Similar
             </button>
             <div class="text-sm text-gray-400">
-              <a :href="'https://readwise.io/open/' + highlight.id" target="_blank" class="flex underline align-middle">
-                View on Readwise <svg class="stroke-2 h-4 w-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><g fill="none" fill-rule="evenodd"><path d="M18 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8c0-1.1.9-2 2-2h5M15 3h6v6M10 14L20.2 3.8"/></g></svg>
+              <a :href="'https://readwise.io/open/' + highlight.id" target="_blank" class="flex underline items-center">
+                View on Readwise
+                <svg class="stroke-2 h-4 w-4 ml-1" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><g fill="none" fill-rule="evenodd"><path d="M18 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8c0-1.1.9-2 2-2h5M15 3h6v6M10 14L20.2 3.8"/></g></svg>
               </a>
             </div>
           </div>
@@ -196,7 +201,10 @@
     >
       <div class="bg-white p-8 rounded shadow-2xl">
         <div v-if="isLoadingHighlights">
-          <svg xmlns="http://www.w3.org/2000/svg" class="animate-spin" width="35" height="35" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+          <p>Loading highlights (this may take a while!)</p>
+          <div class="flex w-full my-8 justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="animate-spin" width="35" height="35" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+          </div>
         </div>
         <div v-else>
           <p v-if="newHighlightsCount > 0">Loaded {{ newHighlightsCount }} new highlights.</p>
@@ -217,11 +225,30 @@
     >
       <div class="bg-white p-8 rounded shadow-2xl">
         <h2 class="text-lg font-bold mb-2">Settings</h2>
-        <div v-for="setting in defaultSettings" class="mb-2">
-          <label :for="setting.key" class="font-medium">{{ setting.name }}</label>
+        <div class="mb-2 w-[400px] max-w-full">
+          <label :for="OPENAI_API_KEY" class="font-medium">
+            <a href="https://platform.openai.com/account/api-keys" target="_blank" class="flex items-center underline">
+              OpenAI API Key
+              <svg class="stroke-2 h-4 w-4 ml-1" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><g fill="none" fill-rule="evenodd"><path d="M18 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8c0-1.1.9-2 2-2h5M15 3h6v6M10 14L20.2 3.8"/></g></svg>
+            </a>
+          </label>
           <input
-            :id="setting.key"
-            v-model="settings[setting.key]"
+            :id="OPENAI_API_KEY"
+            v-model="settings.OPENAI_API_KEY"
+            type="text"
+            class="mt-2 w-full rounded-lg border border-neutral-500 px-4 py-2 text-neutral-900 shadow focus:outline-none"
+          >
+        </div>
+        <div class="mb-2">
+          <label :for="READWISE_TOKEN" class="font-medium">
+            <a href="https://readwise.io/access_token" target="_blank" class="flex items-center underline">
+              Readwise Access Token
+              <svg class="stroke-2 h-4 w-4 ml-1" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><g fill="none" fill-rule="evenodd"><path d="M18 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8c0-1.1.9-2 2-2h5M15 3h6v6M10 14L20.2 3.8"/></g></svg>
+            </a>
+          </label>
+          <input
+            :id="READWISE_TOKEN"
+            v-model="settings.READWISE_TOKEN"
             type="text"
             class="mt-2 w-full rounded-lg border border-neutral-500 px-4 py-2 text-neutral-900 shadow focus:outline-none"
           >

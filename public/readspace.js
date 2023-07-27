@@ -1,7 +1,51 @@
 const { createApp } = Vue;
 
-// const BASE_URL = 'http://localhost:3080';
-const BASE_URL = '';
+const BASE_URL = 'http://localhost:3080';
+
+const isElectron = () => {
+  return window && window.process && window.process.type;
+}
+let shell;
+
+const routeLinksToExternal = (links) => {
+  Array.prototype.forEach.call(links, function (link) {
+    const url = link.getAttribute('href');
+    if (url.indexOf('http') === 0) {
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        shell.openExternal(url);
+      });
+    }
+  });
+}
+
+// For Electron:
+if (isElectron()) {
+  const server = require('../server.js');
+  shell = require('electron').shell;
+
+  process.on('uncaughtException', function (err) {
+    console.log(err);
+  });
+
+  // Disable CORS for OpenAI API
+  const setRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function newSetRequestHeader(key, val) {
+      if (key.toLocaleLowerCase() === 'user-agent') {
+          return;
+      }
+      setRequestHeader.apply(this, [key, val]);
+  };
+
+  // Open links in external browser
+  document.addEventListener('DOMContentLoaded', function () {
+    const links = document.querySelectorAll('a[href]');
+    routeLinksToExternal(links);
+  });
+}
+
+
+
 
 const app = createApp({
 
@@ -48,10 +92,22 @@ const app = createApp({
       window.scrollTo(0, 0);
 
       let response = await fetch(`${BASE_URL}/api/search?q=${this.searchQuery}`);
-      this.highlights = (await response.json()).map(h => ({
-        ...h,
-        author: h.author.replace(/\./g, ' . '),
-      }));
+      this.highlights = (await response.json()).map(h => {
+        let html = marked.parse(h.page_content, { mangle: false, headerIds: false });
+        html = html.replace(/<a href=/g, '<a target="_blank" href=');
+        
+        return {
+          text: h.page_content,
+          html,
+          ...h.metadata,
+        }
+      });
+
+      // Add event listener for opening links in external browser
+      if (isElectron() && shell) this.$nextTick(() => {
+        const links = document.querySelectorAll('.highlight a');
+        routeLinksToExternal(links);
+      });
 
       window.location.hash = `q=${encodeURIComponent(this.searchQuery)}`;
       this.adjustHeight();
