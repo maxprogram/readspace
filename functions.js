@@ -169,10 +169,33 @@ const load_db = async () => {
  * @param {number} [k] The number of results to return
  * @returns {Array} An array of results
  */
-const search_similar = async (query, k = 30) => {
+const search_similar = async (query, k = 30, filters={}) => {
     const db = await load_db();
 
-    return await db.search(query, k);
+    const results = await db.search(query, filters, 0.5);
+
+    return results.slice(0, k);
+};
+
+
+/**
+ * Gets all books from the database
+ * @returns {Array} An array of books
+ */
+const get_books = async () => {
+    const db = await load_db();
+
+    let books = db.documents.map(doc => ({
+        id: doc.metadata.book_id,
+        title: doc.metadata.book,
+    }));
+
+    // Return unique books by title & alphabetically
+    return books.filter((book, index, self) =>
+        index === self.findIndex((b) => (
+            b.title === book.title
+        ))
+    ).sort((a, b) => a.title.localeCompare(b.title));
 };
 
 
@@ -181,4 +204,5 @@ module.exports = {
     build_db,
     load_db,
     search_similar,
+    get_books
 };

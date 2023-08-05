@@ -28,6 +28,10 @@
       }
     }
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/vue-select@4.0.0-beta.6"></script>
+  <link rel="stylesheet" href="https://unpkg.com/vue-select@4.0.0-beta.6/dist/vue-select.css">
   <style>
     @font-face {
       font-family: 'EB Garamond';
@@ -56,9 +60,22 @@
     .font-serif {
       font-family: 'EB Garamond', ui-serif, serif !important;
     }
+    :root {
+      --vs-border-width: 0px;
+      --vs-search-input-placeholder-color: rgb(148,163,184);
+    }
+    .vs__dropdown-toggle {
+      padding: 5px;
+    }
+    .vs__selected {
+      padding: 4px;
+    }
+    .vs__search, .vs__search:focus {
+      border-width: 0px !important;
+      box-shadow: none !important;
+      padding: 4px 6px !important;
+    }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 </head>
 <body>
   <div id="app">
@@ -113,28 +130,49 @@
       <div class="w-3/4 md:w-1/2 fixed top-0 z-10 border-transparent bg-gradient-to-b from-white via-white to-transparent pt-6 md:pt-2">
         <div class="stretch mx-1 mt-4 flex flex-row gap-3 last:mb-2 md:mx-0 md:last:mb-6 lg:mx-auto lg:max-w-3xl">
           <div class="relative flex w-full flex-grow flex-col rounded-md border border-black/10 bg-white shadow-[0_0_10px_rgba(0,0,0,0.10)]">
-            <!-- <button class="absolute left-2 top-2 rounded-sm p-1 text-neutral-800 opacity-60 hover:bg-neutral-200 hover:text-neutral-900 dark:bg-opacity-50 dark:text-neutral-100 dark:hover:text-neutral-200">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-bolt"><path d="M13 3l0 7l6 0l-8 11l0 -7l-6 0l8 -11"></path></svg>
-            </button> -->
-            <textarea 
-              class="m-0 w-full resize-none border-0 bg-transparent p-0 py-2 pr-[110px] pl-3 
-                text-black md:py-3 focus:shadow-transparent focus:ring-0" 
-              placeholder="Enter a quote or passage..." 
-              rows="1"
-              style="resize: none; max-height: 400px; overflow: hidden; height: 44px; bottom: 44px;"
-              v-model="searchQuery"
-              id="searchQuery"
-              @input="adjustHeight"
-              @keydown.enter.prevent="searchHighlights"
-            ></textarea>
+            
+            <!-- Query -->
+            <div class="relative w-full flex flex-grow flex-col">
+              <textarea 
+                class="m-0 w-full resize-none border-0 bg-transparent p-0 py-2 pr-[110px] pl-4
+                  text-black md:py-3 focus:shadow-transparent focus:ring-0
+                  placeholder:text-slate-400" 
+                placeholder="Enter a quote or passage..." 
+                rows="1"
+                style="resize: none; max-height: 400px; overflow: hidden; height: 44px; bottom: 44px;"
+                v-model="searchQuery"
+                id="searchQuery"
+                @input="adjustHeight"
+                @keydown.enter.prevent="searchHighlights"
+              ></textarea>
+              <button 
+                @click="searchHighlights"
+                class="absolute right-2 top-2 rounded-sm p-1 px-2 
+                  text-sm text-neutral-800 opacity-60 bg-neutral-200
+                  hover:bg-neutral-300 hover:text-neutral-900"
+              >
+                Explore
+              </button>
+            </div>
+
+            <!-- Filters -->
             <button 
-              @click="searchHighlights"
-              class="absolute right-2 top-2 rounded-sm p-1 px-2 
-                text-sm text-neutral-800 opacity-60 bg-neutral-200
-                hover:bg-neutral-300 hover:text-neutral-900"
+              class="absolute inset-y-full inset-x-2/4 w-fit h-fit py-1 px-3 rounded-b-md
+                text-neutral-800 bg-white border border-black/10 
+                hover:bg-neutral-200 hover:text-neutral-900"
+              @click="toggleFilters"
             >
-              Explore
+              <svg :class="{'rotate-180': showFilters}" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13l5 5 5-5M7 6l5 5 5-5"/></svg>
             </button>
+            <div class="w-full flex flex-grow flex-col" id="filters" :class="{'hidden': !showFilters}">
+              <v-select
+                :options="books"
+                v-model="filters.books"
+                placeholder="Filter by book..."
+                class="bg-transparent border-t"
+                multiple
+              ></v-select>
+            </div>
           </div>
         </div>
       </div>

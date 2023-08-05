@@ -21,11 +21,20 @@ class VectorStore {
 
 
     /**
-   * Handles OpenAI API calls with exponential backoff on 503 and 429 errors
-   * @param {string[]} texts - Array of texts to be embedded
-   * @param {number} [retryCount=0] - Current count of retries
-   * @returns {Promise} Promise resolving to an array of embeddings
-   */
+     * Gets raw document data from the document mapping
+     * @returns {Object[]} Array of document objects: { page_content, metadata }
+     */
+    get documents() {
+        return Object.values(this.document_mapping);
+    }
+
+
+    /**
+     * Handles OpenAI API calls with exponential backoff on 503 and 429 errors
+     * @param {string[]} texts - Array of texts to be embedded
+     * @param {number} [retryCount=0] - Current count of retries
+     * @returns {Promise} Promise resolving to an array of embeddings
+     */
     async _createEmbeddings(texts, retryCount = 0) {
         const maxRetries = 5;
         const delay = 5000;
@@ -119,20 +128,35 @@ class VectorStore {
     /**
      * Searches the index for the provided query and returns the top k results
      * @param {string} query - The query to search for in the index
-     * @param {number} [k=4] - The number of top entries to return
+     * @param {Object} [filters={}] - Filters to apply to the search
+     * @param {number} [threshold=0.5] - Minimum score for a result to be returned
      * @returns {Object[]} Array of document objects: { page_content, metadata, score }
      */
-    async search(query, k = 4) {
+    async search(query, filters = {}, threshold = 0.5) {
         const embeddingResponse = await this._createEmbeddings(query);
         const embedding = embeddingResponse[0].embedding;
+        const indexSize = this.index.ntotal();
         
-        const results = this.index.search(embedding, k);
+        let results = this.index.search(embedding, indexSize);
 
-        return results.labels.map((id, idx) => ({
+        results = results.labels.map((id, idx) => ({
             ...this.document_mapping[this.index_mapping[id]],
             id: this.index_mapping[id],
             score: 1 - results.distances[idx],
         }));
+
+        for (const filter in filters) {
+            let values = filters[filter];
+            if (Array.isArray(values) && values.length > 0) {
+                results = results.filter(result => values.includes(result.metadata[filter]));
+            } else if (values) {
+                results = results.filter(result => result.metadata[filter] === values);
+            }
+        }
+
+        results = results.filter(result => result.score >= threshold);
+
+        return results;
     }
 }
 

@@ -49,6 +49,10 @@ if (isElectron()) {
 
 const app = createApp({
 
+  components: {
+    vSelect: window['vue-select'],
+  },
+
   data() {
     return {
       searchQuery: '',
@@ -62,20 +66,45 @@ const app = createApp({
         { name: 'OpenAI API Key', key: 'OPENAI_API_KEY', value: '' },
         { name: 'Readwise API Key', key: 'READWISE_TOKEN', value: '' },
       ],
-      settings: {}
+      settings: {},
+      books: [],
+      showFilters: false,
+      filters: {
+        books: [],
+      }
+    }
+  },
+
+  watch: {
+    filters: {
+      handler: function() {
+        console.log('filters changed');
+        this.searchHighlights();
+      },
+      deep: true,
     }
   },
 
   mounted() {
     const params = new URLSearchParams(window.location.hash.slice(1));
     this.searchQuery = params.get('q') || '';
+    this.filters.books = params.get('books') ? params.get('books').split(',,') : [];
+    if (params.get('books')) this.showFilters = true;
     if (this.searchQuery) {
       this.adjustHeight();
       this.searchHighlights();
     }
+
+    this.fetchBooks();
   },
 
   methods: {
+
+    async fetchBooks() {
+      let response = await fetch(`${BASE_URL}/api/books`);
+      let books = await response.json();
+      this.books = books.map(b => b.title);
+    },
 
     async loadHighlights() {
       this.isLoadingHighlights = true;
@@ -91,11 +120,12 @@ const app = createApp({
       this.isLoading = true;
       window.scrollTo(0, 0);
 
-      let response = await fetch(`${BASE_URL}/api/search?q=${this.searchQuery}`);
+      let response = await fetch(`${BASE_URL}/api/search?q=${this.searchQuery}&books=${this.filters.books.join(',,')}`);
+      
       this.highlights = (await response.json()).map(h => {
         let html = marked.parse(h.page_content, { mangle: false, headerIds: false });
         html = html.replace(/<a href=/g, '<a target="_blank" href=');
-        
+
         return {
           text: h.page_content,
           html,
@@ -109,9 +139,16 @@ const app = createApp({
         routeLinksToExternal(links);
       });
 
-      window.location.hash = `q=${encodeURIComponent(this.searchQuery)}`;
+      this.setQueryParams();
       this.adjustHeight();
       this.isLoading = false;
+    },
+
+    setQueryParams() {
+      const params = new URLSearchParams();
+      params.set('q', this.searchQuery);
+      params.set('books', this.filters.books.join(',,'));
+      window.location.hash = params.toString();
     },
 
     async openSettings() {
@@ -140,13 +177,22 @@ const app = createApp({
       this.searchHighlights();
     },
 
-    adjustHeight(event) {
-      const $el = event ? event.target : document.getElementById('searchQuery');
+    toggleFilters() {
+      this.showFilters = !this.showFilters;
+      this.$nextTick(() => {
+        this.adjustHeight();
+      });
+    },
+
+    adjustHeight() {
+      const $el = document.getElementById('searchQuery');
+      const $filters = document.getElementById('filters');
       const $spacer = document.getElementById('spacer');
+      const height = $el.scrollHeight + $filters.offsetHeight;
 
       $el.style.height = 'auto';
       $el.style.height = $el.scrollHeight + 'px';
-      $spacer.style.height = $el.scrollHeight - 50 + 'px';
+      $spacer.style.height = height - 50 + 'px';
     },
 
   }
