@@ -38,10 +38,10 @@ app.get('/api/load_highlights', async (req, res) => {
 app.get('/api/search', async (req, res) => {
     try {
         const query = req.query.q;
-        const book = req.query.books.split(',,').filter(b => b.length > 0);
+        const books = req.query.books.split(',').filter(b => b.length > 0).map(Number);
 
         let filters = {};
-        if (book.length > 0) filters = { book };
+        if (books.length > 0) filters = { book_id: books };
 
         console.log(`\n* Searching for "${query.substring(0, 50)}..."`);
         const results = await search_similar(query, k=30, filters);
@@ -59,7 +59,10 @@ app.get('/api/search', async (req, res) => {
 app.get('/api/settings', async (req, res) => {
     try {
         const keys = await keytar.findCredentials('readspace');
-        const settings = {};
+        const settings = {
+            OPENAI_API_KEY: '',
+            READWISE_TOKEN: ''
+        };
         for (const key of keys) {
             settings[key.account] = key.password;
         }

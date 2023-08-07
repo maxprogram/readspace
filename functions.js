@@ -200,6 +200,7 @@ const get_books = async () => {
     let books = db.documents.map(doc => ({
         id: doc.metadata.book_id,
         title: doc.metadata.book,
+        author: doc.metadata.author,
     }));
 
     // Return unique books by title & alphabetically

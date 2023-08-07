@@ -78,24 +78,28 @@ const app = createApp({
   watch: {
     filters: {
       handler: function() {
-        console.log('filters changed');
         this.searchHighlights();
       },
       deep: true,
     }
   },
 
-  mounted() {
+  async mounted() {
+    await this.fetchBooks();
+
     const params = new URLSearchParams(window.location.hash.slice(1));
     this.searchQuery = params.get('q') || '';
-    this.filters.books = params.get('books') ? params.get('books').split(',,') : [];
-    if (params.get('books')) this.showFilters = true;
+    if (params.get('books')) {
+      params.get('books').split(',').forEach(b => {
+        let book = this.books.find(book => book.id == b);
+        this.filters.books.push(book);
+      });
+      this.showFilters = true;
+    }
     if (this.searchQuery) {
       this.adjustHeight();
       this.searchHighlights();
     }
-
-    this.fetchBooks();
   },
 
   methods: {
@@ -103,7 +107,10 @@ const app = createApp({
     async fetchBooks() {
       let response = await fetch(`${BASE_URL}/api/books`);
       let books = await response.json();
-      this.books = books.map(b => b.title);
+      this.books = books.map(b => ({
+        ...b,
+        label: `${b.title} (${b.author})`
+      }));
     },
 
     async loadHighlights() {
@@ -120,7 +127,8 @@ const app = createApp({
       this.isLoading = true;
       window.scrollTo(0, 0);
 
-      let response = await fetch(`${BASE_URL}/api/search?q=${this.searchQuery}&books=${this.filters.books.join(',,')}`);
+      let books = this.filters.books.map(b => b.id).join(',');
+      let response = await fetch(`${BASE_URL}/api/search?q=${this.searchQuery}&books=${books}`);
       
       this.highlights = (await response.json()).map(h => {
         let html = marked.parse(h.page_content, { mangle: false, headerIds: false });
@@ -147,7 +155,7 @@ const app = createApp({
     setQueryParams() {
       const params = new URLSearchParams();
       params.set('q', this.searchQuery);
-      params.set('books', this.filters.books.join(',,'));
+      params.set('books', this.filters.books.map(b => b.id).join(','));
       window.location.hash = params.toString();
     },
 
