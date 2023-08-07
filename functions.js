@@ -121,16 +121,29 @@ const build_db = async () => {
         return { documents_added: 0 };
     }
 
-    console.log(`Adding ${docs.length} documents to index...`);
+    console.log(`Loading ${docs.length} documents...`);
+
+    // Load existing database
+    g_db = new VectorStore();
+    if (fs.existsSync(g_index)) {
+        await g_db.load(g_index);
+        
+        // If highlight exists already, update it & remove from docs
+        for (let doc of docs) {
+            for (const [key, old_doc] of Object.entries(g_db.document_mapping)) {
+                if (old_doc.metadata.id === doc.metadata.id) {
+                    console.log(`Updating highlight: ${doc.metadata.id}`);
+                    g_db.document_mapping[key] = doc;
+                    docs.splice(docs.indexOf(doc), 1);
+                    break;
+                }
+            }
+        }
+    }
 
     // Add documents to database
-    const db = new VectorStore();
-    if (fs.existsSync(g_index)) {
-        g_db = await db.load(g_index);
-        await g_db.addDocuments(docs);
-    } else {
-        g_db = await db.addDocuments(docs);
-    }
+    await g_db.addDocuments(docs);
+    console.log(`Added ${docs.length} documents to index!`);
 
     // Save database
     await fs.ensureDir(g_index);
