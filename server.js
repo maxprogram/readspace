@@ -7,9 +7,6 @@ const keytar = require('keytar');
 const { build_db, search_similar, get_books } = require('./functions.js');
 
 
-const DATA_PATH = path.join(process.env.HOME, 'Documents/Readspace');
-
-
 const app = express();
 const port = process.env.PORT || 3080;
 
