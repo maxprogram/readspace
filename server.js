@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
+const keytar = require('keytar');
 
 const { build_db, search_similar, get_books } = require('./functions.js');
 
@@ -58,24 +59,26 @@ app.get('/api/search', async (req, res) => {
 });
 
 app.get('/api/settings', async (req, res) => {
-    if (!fs.existsSync(SETTINGS_PATH)) {
-        await fs.ensureFile(SETTINGS_PATH);
-        await fs.writeFile(SETTINGS_PATH, '{}');
+    try {
+        const keys = await keytar.findCredentials('readspace');
+        const settings = {};
+        for (const key of keys) {
+            settings[key.account] = key.password;
+        }
+        res.json(settings);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-
-    const data = await fs.readFile(SETTINGS_PATH);
-    const settings = JSON.parse(data);
-    res.json(settings);
-    
 });
 
 app.post('/api/settings', async (req, res) => {
     try {
-        const settings = JSON.stringify(req.body);
-        await fs.writeFile(SETTINGS_PATH, settings);
+        for (const [key, value] of Object.entries(req.body)) {
+            await keytar.setPassword('readspace', key, value);
+        }
         res.json({
-            status: 'sucess',
-            settings
+            status: 'success',
+            settings: req.body
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
