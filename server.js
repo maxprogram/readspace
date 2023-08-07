@@ -55,7 +55,7 @@ app.get('/api/search', async (req, res) => {
 
 app.get('/api/settings', async (req, res) => {
     try {
-        const keys = await keytar.findCredentials('readspace');
+        const keys = await keytar.findCredentials('Readspace');
         const settings = {
             OPENAI_API_KEY: '',
             READWISE_TOKEN: ''
@@ -72,7 +72,7 @@ app.get('/api/settings', async (req, res) => {
 app.post('/api/settings', async (req, res) => {
     try {
         for (const [key, value] of Object.entries(req.body)) {
-            await keytar.setPassword('readspace', key, value);
+            await keytar.setPassword('Readspace', key, value);
         }
         res.json({
             status: 'success',

@@ -6,15 +6,19 @@ const isElectron = () => {
   return window && window.process && window.process.type;
 }
 let shell;
+let openExternal = (e) => {
+  if (!shell) return;
+  e.preventDefault();
+  shell.openExternal(e.target.href);
+}
 
 const routeLinksToExternal = (links) => {
+  if (!links) return;
   Array.prototype.forEach.call(links, function (link) {
     const url = link.getAttribute('href');
-    if (url.indexOf('http') === 0) {
-      link.addEventListener('click', function (e) {
-        e.preventDefault();
-        shell.openExternal(url);
-      });
+    if (url && url.indexOf('http') === 0) {
+      link.removeEventListener('click', openExternal);
+      link.addEventListener('click', openExternal);
     }
   });
 }
@@ -36,12 +40,6 @@ if (isElectron()) {
       }
       setRequestHeader.apply(this, [key, val]);
   };
-
-  // Open links in external browser
-  document.addEventListener('DOMContentLoaded', function () {
-    const links = document.querySelectorAll('a[href]');
-    routeLinksToExternal(links);
-  });
 }
 
 
@@ -100,6 +98,9 @@ const app = createApp({
       this.adjustHeight();
       this.searchHighlights();
     }
+
+    // Open links in external browser
+    routeLinksToExternal(document.querySelectorAll('a'));
   },
 
   methods: {
@@ -142,9 +143,8 @@ const app = createApp({
       });
 
       // Add event listener for opening links in external browser
-      if (isElectron() && shell) this.$nextTick(() => {
-        const links = document.querySelectorAll('.highlight a');
-        routeLinksToExternal(links);
+      this.$nextTick(() => {
+        routeLinksToExternal(document.querySelectorAll('.highlight a'));
       });
 
       this.setQueryParams();
@@ -169,6 +169,9 @@ const app = createApp({
         }
       }
       this.showSettings = true;
+      this.$nextTick(() => {
+        routeLinksToExternal(document.querySelectorAll('.setting a'));
+      });
     },
 
     async saveSettings() {

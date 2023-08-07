@@ -42,7 +42,7 @@ const get_last_fetch = async () => {
  * Loads in settings.json with customized api keys
  */
 const load_settings = async () => {
-    const keys = await keytar.findCredentials('readspace');
+    const keys = await keytar.findCredentials('Readspace');
     for (const key of keys) {
         if (key.account == 'OPENAI_API_KEY') process.env.OPENAI_API_KEY = key.password;
         if (key.account == 'READWISE_TOKEN') process.env.READWISE_TOKEN = key.password;
@@ -203,11 +203,9 @@ const get_books = async () => {
         author: doc.metadata.author,
     }));
 
-    // Return unique books by title & alphabetically
+    // Return unique books & alphabetically
     return books.filter((book, index, self) =>
-        index === self.findIndex((b) => (
-            b.title === book.title
-        ))
+        index === self.findIndex((b) => b.id === book.id)
     ).sort((a, b) => a.title.localeCompare(b.title));
 };
 
