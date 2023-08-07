@@ -1,5 +1,4 @@
 const express = require('express');
-const fs = require('fs-extra');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
@@ -9,7 +8,6 @@ const { build_db, search_similar, get_books } = require('./functions.js');
 
 
 const DATA_PATH = path.join(process.env.HOME, 'Documents/Readspace');
-const SETTINGS_PATH = path.join(DATA_PATH, 'settings.json');
 
 
 const app = express();

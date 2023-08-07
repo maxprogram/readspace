@@ -3,6 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const https = require('https');
+const keytar = require('keytar');
 const VectorStore = require('./db');
 
 dotenv.config();
@@ -14,7 +15,6 @@ let g_db = null;
 const DATA_PATH = path.join(process.env.HOME, 'Documents/Readspace');
 const g_index = path.join(DATA_PATH, 'readwise_faiss_index');
 const g_last_fetch = path.join(DATA_PATH, 'last_fetch.txt');
-const g_settings_path = path.join(DATA_PATH, 'settings.json');
 
 
 /**
@@ -42,11 +42,10 @@ const get_last_fetch = async () => {
  * Loads in settings.json with customized api keys
  */
 const load_settings = async () => {
-    if (fs.existsSync(g_settings_path)) {
-        const data = await fs.readFile(g_settings_path);
-        const settings = JSON.parse(data);
-        if (settings.OPENAI_API_KEY) process.env.OPENAI_API_KEY = settings.OPENAI_API_KEY;
-        if (settings.READWISE_TOKEN) process.env.READWISE_TOKEN = settings.READWISE_TOKEN;
+    const keys = await keytar.findCredentials('readspace');
+    for (const key of keys) {
+        if (key.account == 'OPENAI_API_KEY') process.env.OPENAI_API_KEY = key.password;
+        if (key.account == 'READWISE_TOKEN') process.env.READWISE_TOKEN = key.password;
     }
 };
 
