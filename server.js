@@ -2,8 +2,8 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
-const keytar = require('keytar');
 
+const keys = require('./keys.js');
 const { build_db, search_similar, get_books } = require('./functions.js');
 
 
@@ -55,14 +55,7 @@ app.get('/api/search', async (req, res) => {
 
 app.get('/api/settings', async (req, res) => {
     try {
-        const keys = await keytar.findCredentials('Readspace');
-        const settings = {
-            OPENAI_API_KEY: '',
-            READWISE_TOKEN: ''
-        };
-        for (const key of keys) {
-            settings[key.account] = key.password;
-        }
+        const settings = await keys.load();
         res.json(settings);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -71,9 +64,7 @@ app.get('/api/settings', async (req, res) => {
 
 app.post('/api/settings', async (req, res) => {
     try {
-        for (const [key, value] of Object.entries(req.body)) {
-            await keytar.setPassword('Readspace', key, value);
-        }
+        await keys.save(req.body);
         res.json({
             status: 'success',
             settings: req.body

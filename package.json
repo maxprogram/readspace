@@ -38,6 +38,7 @@
       "server.js",
       "db.js",
       "functions.js",
+      "keys.js",
       "public/**/*"
     ],
     "mac": {

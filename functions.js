@@ -3,7 +3,8 @@ const path = require('path');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const https = require('https');
-const keytar = require('keytar');
+
+const keys = require('./keys.js');
 const VectorStore = require('./db');
 
 dotenv.config();
@@ -35,18 +36,6 @@ const get_last_fetch = async () => {
     if (!fs.existsSync(g_last_fetch)) return null;
     const time = await fs.readFile(g_last_fetch, 'utf8');
     return time;
-};
-
-
-/**
- * Loads in settings.json with customized api keys
- */
-const load_settings = async () => {
-    const keys = await keytar.findCredentials('Readspace');
-    for (const key of keys) {
-        if (key.account == 'OPENAI_API_KEY') process.env.OPENAI_API_KEY = key.password;
-        if (key.account == 'READWISE_TOKEN') process.env.READWISE_TOKEN = key.password;
-    }
 };
 
 
@@ -89,7 +78,7 @@ const get_highlights = async () => {
  * @returns {Object} An object with the number of documents added
  */
 const build_db = async () => {
-    await load_settings();
+    await keys.load();
     const documents = await get_highlights();
 
     // Create index documents
@@ -167,7 +156,7 @@ const load_db = async () => {
         throw new Error('Readwise highlights must be loaded first!');
     }
 
-    await load_settings();
+    await keys.load();
     g_db = new VectorStore();
     await g_db.load(g_index);
 
